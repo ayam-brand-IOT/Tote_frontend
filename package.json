@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build"
+    "build": "vue-cli-service build",
+    "build:backend": "npm run build && echo 'Frontend compiled to ../Tote_backend/public/app'"
   },
   "dependencies": {
     "vue": "^3.2.13",
