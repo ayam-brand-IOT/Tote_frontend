@@ -1,9 +1,9 @@
 <template>
   <div class="totes-list">
     <div class="header">
-      <h1>📦 Lista de Totes</h1>
+      <h1>📦 Tote List</h1>
       <button @click="refreshTotes" class="refresh-btn" :disabled="loading">
-        {{ loading ? '⟳ Cargando...' : '🔄 Actualizar' }}
+        {{ loading ? '⟳ Loading...' : '🔄 Refresh' }}
       </button>
     </div>
 
@@ -12,11 +12,11 @@
     </div>
 
     <div v-if="loading && !totes.length" class="loading">
-      Cargando totes...
+      Loading totes...
     </div>
 
     <div v-else-if="!totes.length" class="empty-state">
-      No hay totes registrados
+      No totes registered
     </div>
 
     <div v-else class="table-container">
@@ -24,21 +24,32 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Pescado (kg)</th>
-            <th>Hielo In (kg)</th>
-            <th>Agua In (kg)</th>
+            <th>Linked Lines</th>
+            <th>Fish (kg)</th>
+            <th>Ice In (kg)</th>
+            <th>Water In (kg)</th>
             <th>Tote (kg)</th>
             <th>Raw (kg)</th>
-            <th>Hielo Out (kg)</th>
-            <th>Agua Out (kg)</th>
+            <th>Ice Out (kg)</th>
+            <th>Water Out (kg)</th>
             <th>Temp Out (°C)</th>
-            <th>Creado</th>
-            <th>Actualizado</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Updated</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="tote in sortedTotes" :key="tote.tote_id" class="tote-row">
+          <tr v-for="tote in sortedTotes" :key="tote.id" class="tote-row">
             <td class="tote-id">{{ tote.tote_id }}</td>
+            <td class="linked-lines">
+              <span v-if="tote.linked_lines && tote.linked_lines.length > 0">
+                <span v-for="(line, index) in tote.linked_lines" :key="line.line_id" class="line-badge">
+                  {{ line.line_id }}: {{ line.product }} ({{ line.type }})
+                  <span v-if="index < tote.linked_lines.length - 1">, </span>
+                </span>
+              </span>
+              <span v-else class="no-link">-</span>
+            </td>
             <td>{{ formatNumber(tote.fish_kg) }}</td>
             <td>{{ formatNumber(tote.ice_kg) }}</td>
             <td>{{ formatNumber(tote.water_kg) }}</td>
@@ -47,6 +58,9 @@
             <td>{{ formatNumber(tote.ice_out_kg) }}</td>
             <td>{{ formatNumber(tote.water_out_kg) }}</td>
             <td>{{ formatTemp(tote.temp_out) }}</td>
+            <td>
+              <span :class="'status-badge status-' + tote.status">{{ tote.status || 'active' }}</span>
+            </td>
             <td>{{ formatDate(tote.created_at) }}</td>
             <td>{{ formatDate(tote.updated_at) }}</td>
           </tr>
@@ -61,15 +75,15 @@
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ totalFishKg.toFixed(2) }}</div>
-        <div class="stat-label">Total Pescado (kg)</div>
+        <div class="stat-label">Total Fish (kg)</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ totalIceOutKg.toFixed(2) }}</div>
-        <div class="stat-label">Total Hielo Out (kg)</div>
+        <div class="stat-label">Total Ice Out (kg)</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ totalWaterOutKg.toFixed(2) }}</div>
-        <div class="stat-label">Total Agua Out (kg)</div>
+        <div class="stat-label">Total Water Out (kg)</div>
       </div>
     </div>
   </div>
@@ -114,7 +128,7 @@ export default {
         const data = await response.json()
         this.totes = data.totes || []
       } catch (err) {
-        this.error = `Error al cargar los totes: ${err.message}`
+        this.error = `Error loading totes: ${err.message}`
         console.error('Error fetching totes:', err)
       } finally {
         this.loading = false
@@ -134,7 +148,7 @@ export default {
     formatDate(dateString) {
       if (!dateString) return '-'
       const date = new Date(dateString)
-      return date.toLocaleString('es-ES', {
+      return date.toLocaleString('en-US', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -145,7 +159,7 @@ export default {
   },
   mounted() {
     this.fetchTotes()
-    // Auto-refresh cada 30 segundos
+    // Auto-refresh every 30 seconds
     this.autoRefreshInterval = setInterval(() => {
       this.fetchTotes()
     }, 30000)
@@ -255,6 +269,19 @@ export default {
       .tote-id {
         font-weight: 600;
         color: #42b983;
+      }
+
+      .linked-lines {
+        .line-badge {
+          font-size: 13px;
+          color: #2c3e50;
+          display: inline-block;
+        }
+
+        .no-link {
+          color: #9ca3af;
+          font-style: italic;
+        }
       }
     }
   }
