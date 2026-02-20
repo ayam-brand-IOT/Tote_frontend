@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import TotesView from '../views/TotesView.vue'
+import LinesView from '../views/LinesView.vue'
 
 const routes = [
   {
@@ -10,6 +11,11 @@ const routes = [
   {
     path: '/totes',
     redirect: '/'
+  },
+  {
+    path: '/lines',
+    name: 'lines',
+    component: LinesView
   },
   {
     path: '/about',
