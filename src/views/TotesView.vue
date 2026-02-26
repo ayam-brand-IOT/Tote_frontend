@@ -59,7 +59,7 @@
             <td>{{ formatNumber(tote.water_out_kg) }}</td>
             <td>{{ formatTemp(tote.temp_out) }}</td>
             <td>
-              <span :class="'status-badge status-' + tote.status">{{ tote.status || 'active' }}</span>
+              <span :class="'status-badge status-' + tote.status">{{ tote.status || 'empty' }}</span>
             </td>
             <td>{{ formatDate(tote.created_at) }}</td>
             <td>{{ formatDate(tote.updated_at) }}</td>
@@ -208,6 +208,52 @@ export default {
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+
+  &.status-empty {
+    background: #f1f3f4;
+    color: #5f6368;
+  }
+
+  &.status-inbound-ready {
+    background: #e3f2fd;
+    color: #1565c0;
+  }
+
+  &.status-product-linked {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  &.status-outbound-ready {
+    background: #fff8e1;
+    color: #f57f17;
+  }
+
+  &.status-in-transit {
+    background: #f3e5f5;
+    color: #6a1b9a;
+  }
+
+  &.status-received-for-packing {
+    background: #e0f7fa;
+    color: #00695c;
+  }
+
+  &.status-offloaded-to-clean {
+    background: #fce4ec;
+    color: #880e4f;
   }
 }
 
