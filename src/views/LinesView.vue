@@ -2,111 +2,15 @@
   <div class="lines-view">
     <div class="header">
       <h1>🏭 Production Lines</h1>
-      <button @click="showAddForm = !showAddForm" class="add-btn">
-        {{ showAddForm ? '✖ Cancel' : '➕ Add Line' }}
-      </button>
+      <button @click="openModal('add')" class="add-btn">➕ Add Line</button>
     </div>
 
-    <!-- Add Line Form -->
-    <div v-if="showAddForm" class="add-form-card">
-      <h2>Add New Production Line</h2>
-      <form @submit.prevent="addLine" class="line-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="line_id">Line ID *</label>
-            <input 
-              type="text" 
-              id="line_id" 
-              v-model="newLine.line_id" 
-              required
-              placeholder="e.g., S001"
-            />
-          </div>
+    <div v-if="error" class="error-message">{{ error }}</div>
+    <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
 
-          <div class="form-group">
-            <label for="product">Product *</label>
-            <input 
-              type="text" 
-              id="product" 
-              v-model="newLine.product" 
-              required
-              placeholder="e.g., Salmon"
-            />
-          </div>
+    <div v-if="loading && !lines.length" class="loading">Loading production lines...</div>
+    <div v-else-if="!lines.length && !loading" class="empty-state">No production lines found. Add your first line!</div>
 
-          <div class="form-group">
-            <label for="type">Type *</label>
-            <input 
-              type="text" 
-              id="type" 
-              v-model="newLine.type" 
-              required
-              placeholder="e.g., Fillet"
-            />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="size">Size</label>
-            <input 
-              type="text" 
-              id="size" 
-              v-model="newLine.size" 
-              placeholder="e.g., 200-400g"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="destination">Destination</label>
-            <input 
-              type="text" 
-              id="destination" 
-              v-model="newLine.destination" 
-              placeholder="e.g., USA"
-            />
-          </div>
-        </div>
-
-        <div class="form-group full-width">
-          <label for="comments">Comments</label>
-          <textarea 
-            id="comments" 
-            v-model="newLine.comments" 
-            rows="3"
-            placeholder="Additional notes..."
-          ></textarea>
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" class="submit-btn" :disabled="loading">
-            {{ loading ? 'Creating...' : '✓ Create Line' }}
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Error Message -->
-    <div v-if="error" class="error-message">
-      {{ error }}
-    </div>
-
-    <!-- Success Message -->
-    <div v-if="successMessage" class="success-message">
-      {{ successMessage }}
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading && !showAddForm" class="loading">
-      Loading production lines...
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="lines.length === 0 && !loading" class="empty-state">
-      No production lines found. Add your first line above!
-    </div>
-
-    <!-- Lines Table -->
     <div v-else class="table-container">
       <table class="lines-table">
         <thead>
@@ -128,17 +32,15 @@
             <td>{{ line.size || '-' }}</td>
             <td>{{ line.destination || '-' }}</td>
             <td class="comments">{{ line.comments || '-' }}</td>
-            <td>
-              <button @click="deleteLine(line.line_id)" class="delete-btn" :disabled="loading">
-                🗑️
-              </button>
+            <td class="actions-cell">
+              <button @click="openModal('edit', line)" class="edit-btn" title="Edit line">✏️</button>
+              <button @click="deleteLine(line.line_id)" class="delete-btn" :disabled="loading" title="Delete line">🗑️</button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Stats -->
     <div v-if="lines.length > 0" class="stats">
       <div class="stat-card">
         <div class="stat-value">{{ lines.length }}</div>
@@ -153,10 +55,58 @@
         <div class="stat-label">Different Types</div>
       </div>
     </div>
+
+    <!-- Modal -->
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>{{ modalMode === 'add' ? 'Add New Production Line' : `Edit Line ${form.line_id}` }}</h2>
+          <button class="modal-close" @click="closeModal">×</button>
+        </div>
+        <form @submit.prevent="submitForm" class="line-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Line ID *</label>
+              <input v-model="form.line_id" required :disabled="modalMode === 'edit'" placeholder="e.g., S001" />
+            </div>
+            <div class="form-group">
+              <label>Product *</label>
+              <input v-model="form.product" required placeholder="e.g., Salmon" />
+            </div>
+            <div class="form-group">
+              <label>Type *</label>
+              <input v-model="form.type" required placeholder="e.g., Fillet" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Size</label>
+              <input v-model="form.size" placeholder="e.g., 200-400g" />
+            </div>
+            <div class="form-group">
+              <label>Destination</label>
+              <input v-model="form.destination" placeholder="e.g., USA" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Comments</label>
+            <textarea v-model="form.comments" rows="3" placeholder="Additional notes..."></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="closeModal" class="cancel-btn">Cancel</button>
+            <button type="submit" class="submit-btn" :disabled="loading">
+              {{ loading ? 'Saving...' : modalMode === 'add' ? '✓ Create Line' : '✓ Save Changes' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
+const emptyForm = () => ({ line_id: '', product: '', type: '', size: '', destination: '', comments: '' })
+
 export default {
   name: 'LinesView',
   data() {
@@ -165,39 +115,39 @@ export default {
       loading: false,
       error: null,
       successMessage: null,
-      showAddForm: false,
-      newLine: {
-        line_id: '',
-        product: '',
-        type: '',
-        size: '',
-        destination: '',
-        comments: ''
-      }
+      showModal: false,
+      modalMode: 'add',
+      form: emptyForm()
     }
   },
   computed: {
-    uniqueProducts() {
-      return new Set(this.lines.map(l => l.product)).size
-    },
-    uniqueTypes() {
-      return new Set(this.lines.map(l => l.type)).size
-    }
+    uniqueProducts() { return new Set(this.lines.map(l => l.product)).size },
+    uniqueTypes()    { return new Set(this.lines.map(l => l.type)).size }
   },
   methods: {
+    openModal(mode, line = null) {
+      this.modalMode = mode
+      this.form = mode === 'edit' && line ? { ...line } : emptyForm()
+      this.error = null
+      this.showModal = true
+    },
+    closeModal() {
+      this.showModal = false
+      this.error = null
+    },
+    async submitForm() {
+      this.modalMode === 'add' ? await this.addLine() : await this.updateLine()
+    },
     async fetchLines() {
       this.loading = true
       this.error = null
       try {
-        const response = await fetch('/api/lines')
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status}`)
-        }
-        const data = await response.json()
+        const res = await fetch('/api/lines')
+        if (!res.ok) throw new Error(`Error: ${res.status}`)
+        const data = await res.json()
         this.lines = data.lines || []
       } catch (err) {
         this.error = `Error loading lines: ${err.message}`
-        console.error('Error fetching lines:', err)
       } finally {
         this.loading = false
       }
@@ -205,89 +155,71 @@ export default {
     async addLine() {
       this.loading = true
       this.error = null
-      this.successMessage = null
-      
       try {
-        const response = await fetch('/api/lines', {
+        const res = await fetch('/api/lines', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(this.newLine)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form)
         })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `Error: ${response.status}`)
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || `Error: ${res.status}`)
         }
-
-        const data = await response.json()
-        this.successMessage = `✓ Line ${this.newLine.line_id} created successfully!`
-        
-        // Reset form
-        this.newLine = {
-          line_id: '',
-          product: '',
-          type: '',
-          size: '',
-          destination: '',
-          comments: ''
-        }
-        
-        // Refresh list
+        this.successMessage = `✓ Line ${this.form.line_id} created successfully!`
+        this.closeModal()
         await this.fetchLines()
-        
-        // Hide form after successful creation
-        setTimeout(() => {
-          this.showAddForm = false
-          this.successMessage = null
-        }, 2000)
-        
+        setTimeout(() => { this.successMessage = null }, 3000)
       } catch (err) {
         this.error = `Error creating line: ${err.message}`
-        console.error('Error adding line:', err)
+      } finally {
+        this.loading = false
+      }
+    },
+    async updateLine() {
+      this.loading = true
+      this.error = null
+      try {
+        const { product, type, size, destination, comments } = this.form
+        const res = await fetch(`/api/lines/${this.form.line_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, type, size, destination, comments })
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || `Error: ${res.status}`)
+        }
+        this.successMessage = `✓ Line ${this.form.line_id} updated successfully!`
+        this.closeModal()
+        await this.fetchLines()
+        setTimeout(() => { this.successMessage = null }, 3000)
+      } catch (err) {
+        this.error = `Error updating line: ${err.message}`
       } finally {
         this.loading = false
       }
     },
     async deleteLine(lineId) {
-      if (!confirm(`Are you sure you want to delete line ${lineId}?`)) {
-        return
-      }
-
+      if (!confirm(`Delete line ${lineId}?`)) return
       this.loading = true
       this.error = null
-      
       try {
-        const response = await fetch(`/api/lines/${lineId}`, {
-          method: 'DELETE'
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `Error: ${response.status}`)
+        const res = await fetch(`/api/lines/${lineId}`, { method: 'DELETE' })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || `Error: ${res.status}`)
         }
-
         this.successMessage = `✓ Line ${lineId} deleted successfully!`
-        
-        // Refresh list
         await this.fetchLines()
-        
-        setTimeout(() => {
-          this.successMessage = null
-        }, 2000)
-        
+        setTimeout(() => { this.successMessage = null }, 3000)
       } catch (err) {
         this.error = `Error deleting line: ${err.message}`
-        console.error('Error deleting line:', err)
       } finally {
         this.loading = false
       }
     }
   },
-  mounted() {
-    this.fetchLines()
-  }
+  mounted() { this.fetchLines() }
 }
 </script>
 
@@ -304,10 +236,7 @@ export default {
   align-items: center;
   margin-bottom: 20px;
 
-  h1 {
-    margin: 0;
-    color: #2c3e50;
-  }
+  h1 { margin: 0; color: #2c3e50; }
 }
 
 .add-btn {
@@ -318,95 +247,9 @@ export default {
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.3s;
-
-  &:hover {
-    background: #359268;
-  }
-}
-
-.add-form-card {
-  background: white;
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-
-  h2 {
-    margin: 0 0 20px 0;
-    color: #2c3e50;
-    font-size: 20px;
-  }
-}
-
-.line-form {
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 15px;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-
-    &.full-width {
-      grid-column: 1 / -1;
-    }
-
-    label {
-      font-weight: 600;
-      margin-bottom: 5px;
-      color: #2c3e50;
-      font-size: 14px;
-    }
-
-    input, textarea {
-      padding: 10px;
-      border: 1px solid #dee2e6;
-      border-radius: 5px;
-      font-size: 14px;
-      transition: border-color 0.3s;
-
-      &:focus {
-        outline: none;
-        border-color: #42b983;
-      }
-    }
-
-    textarea {
-      resize: vertical;
-      font-family: inherit;
-    }
-  }
-
-  .form-actions {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .submit-btn {
-    padding: 12px 30px;
-    background: #42b983;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    transition: background 0.3s;
-
-    &:hover:not(:disabled) {
-      background: #359268;
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
+  font-weight: 600;
+  transition: background 0.2s;
+  &:hover { background: #359268; }
 }
 
 .error-message {
@@ -438,7 +281,7 @@ export default {
   overflow-x: auto;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   margin-bottom: 20px;
 }
 
@@ -449,7 +292,6 @@ export default {
 
   thead {
     background: #f8f9fa;
-    
     th {
       padding: 15px 10px;
       text-align: left;
@@ -460,50 +302,52 @@ export default {
     }
   }
 
-  tbody {
-    .line-row {
+  tbody .line-row {
+    transition: background 0.2s;
+    &:hover { background: #f8f9fa; }
+
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .line-id { font-weight: 600; color: #42b983; }
+
+    .comments {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .actions-cell {
+      display: flex;
+      gap: 6px;
+    }
+
+    .edit-btn {
+      padding: 5px 10px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
       transition: background 0.2s;
+      &:hover { background: #2563eb; }
+    }
 
-      &:hover {
-        background: #f8f9fa;
-      }
-
-      td {
-        padding: 12px 10px;
-        border-bottom: 1px solid #dee2e6;
-      }
-
-      .line-id {
-        font-weight: 600;
-        color: #42b983;
-      }
-
-      .comments {
-        max-width: 300px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .delete-btn {
-        padding: 5px 10px;
-        background: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background 0.3s;
-
-        &:hover:not(:disabled) {
-          background: #c82333;
-        }
-
-        &:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-      }
+    .delete-btn {
+      padding: 5px 10px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+      &:hover:not(:disabled) { background: #c82333; }
+      &:disabled { opacity: 0.6; cursor: not-allowed; }
     }
   }
 }
@@ -519,43 +363,135 @@ export default {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   text-align: center;
 
-  .stat-value {
-    font-size: 32px;
-    font-weight: bold;
-    color: #42b983;
-    margin-bottom: 5px;
+  .stat-value { font-size: 32px; font-weight: bold; color: #42b983; margin-bottom: 5px; }
+  .stat-label { font-size: 14px; color: #666; }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalIn 0.2s ease;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e5e7eb;
+
+  h2 { margin: 0; color: #2c3e50; font-size: 18px; }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+    padding: 0 4px;
+    &:hover { color: #111; }
+  }
+}
+
+.line-form {
+  padding: 25px;
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
   }
 
-  .stat-label {
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+
+    label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #374151;
+      font-size: 13px;
+    }
+
+    input, textarea {
+      padding: 10px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      &:focus { outline: none; border-color: #42b983; }
+      &:disabled { background: #f3f4f6; color: #6b7280; cursor: not-allowed; }
+    }
+
+    textarea { resize: vertical; font-family: inherit; }
+  }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+
+  .cancel-btn {
+    padding: 10px 24px;
+    background: #f3f4f6;
+    color: #374151;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
     font-size: 14px;
-    color: #666;
+    font-weight: 600;
+    transition: background 0.2s;
+    &:hover { background: #e5e7eb; }
+  }
+
+  .submit-btn {
+    padding: 10px 24px;
+    background: #42b983;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s;
+    &:hover:not(:disabled) { background: #359268; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
   }
 }
 
 @media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 15px;
-
-    h1 {
-      font-size: 24px;
-    }
-  }
-
-  .line-form .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .lines-table {
-    font-size: 12px;
-
-    thead th,
-    tbody td {
-      padding: 8px 5px;
-    }
-  }
+  .header { flex-direction: column; gap: 15px; h1 { font-size: 24px; } }
+  .line-form .form-row { grid-template-columns: 1fr; }
+  .lines-table { font-size: 12px; thead th, tbody td { padding: 8px 5px; } }
 }
 </style>

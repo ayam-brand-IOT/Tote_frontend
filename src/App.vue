@@ -3,8 +3,7 @@
     <nav>
       <router-link to="/totes">📦 Totes</router-link> |
       <router-link to="/lines">🏭 Lines</router-link> |
-      <router-link to="/export">📥 Export</router-link> |
-      <router-link to="/about">ℹ️ About</router-link>
+      <router-link to="/export">📥 Export</router-link>
     </nav>
     <router-view/>
   </div>

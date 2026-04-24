@@ -2,22 +2,19 @@
   <div class="totes-list">
     <div class="header">
       <h1>📦 Tote List</h1>
-      <button @click="refreshTotes" class="refresh-btn" :disabled="loading">
-        {{ loading ? '⟳ Loading...' : '🔄 Refresh' }}
-      </button>
+      <div class="header-actions">
+        <button @click="openModal('add')" class="add-btn">➕ Add Tote</button>
+        <button @click="refreshTotes" class="refresh-btn" :disabled="loading">
+          {{ loading ? '⟳ Loading...' : '🔄 Refresh' }}
+        </button>
+      </div>
     </div>
 
-    <div v-if="error" class="error-message">
-      ❌ {{ error }}
-    </div>
+    <div v-if="error" class="error-message">❌ {{ error }}</div>
+    <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
 
-    <div v-if="loading && !totes.length" class="loading">
-      Loading totes...
-    </div>
-
-    <div v-else-if="!totes.length" class="empty-state">
-      No totes registered
-    </div>
+    <div v-if="loading && !totes.length" class="loading">Loading totes...</div>
+    <div v-else-if="!totes.length" class="empty-state">No totes registered</div>
 
     <div v-else class="table-container">
       <table class="totes-table">
@@ -36,6 +33,7 @@
             <th>Status</th>
             <th>Created</th>
             <th>Updated</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -63,6 +61,9 @@
             </td>
             <td>{{ formatDate(tote.created_at) }}</td>
             <td>{{ formatDate(tote.updated_at) }}</td>
+            <td>
+              <button @click="openModal('edit', tote)" class="edit-btn" title="Edit tote">✏️</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -86,10 +87,81 @@
         <div class="stat-label">Total Water Out (kg)</div>
       </div>
     </div>
+
+    <!-- Modal -->
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>{{ modalMode === 'add' ? 'Add New Tote' : `Edit Tote ${form.tote_id}` }}</h2>
+          <button class="modal-close" @click="closeModal">×</button>
+        </div>
+        <form @submit.prevent="submitForm" class="tote-form">
+
+          <div class="form-group">
+            <label>Tote ID *</label>
+            <input v-model="form.tote_id" required :disabled="modalMode === 'edit'" placeholder="e.g., T001" />
+          </div>
+
+          <div class="form-section-title">Inbound</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tote (kg)</label>
+              <input v-model.number="form.tote_kg" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Ice In (kg)</label>
+              <input v-model.number="form.ice_kg" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Water In (kg)</label>
+              <input v-model.number="form.water_kg" type="number" min="0" step="1" placeholder="0" />
+            </div>
+          </div>
+
+          <div class="form-section-title">Outbound</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fish (kg)</label>
+              <input v-model.number="form.fish_kg" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Raw (kg)</label>
+              <input v-model.number="form.raw_kg" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Ice Out (kg)</label>
+              <input v-model.number="form.ice_out_kg" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Water Out (kg)</label>
+              <input v-model.number="form.water_out_kg" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Temp Out (°C)</label>
+              <input v-model.number="form.temp_out" type="number" step="0.1" placeholder="0.0" />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" @click="closeModal" class="cancel-btn">Cancel</button>
+            <button type="submit" class="submit-btn" :disabled="loading">
+              {{ loading ? 'Saving...' : modalMode === 'add' ? '✓ Create Tote' : '✓ Save Changes' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
+const emptyForm = () => ({
+  tote_id: '',
+  tote_kg: 0, ice_kg: 0, water_kg: 0,
+  fish_kg: null, raw_kg: 0,
+  ice_out_kg: null, water_out_kg: 0, temp_out: null
+})
+
 export default {
   name: 'TotesList',
   data() {
@@ -97,45 +169,110 @@ export default {
       totes: [],
       loading: false,
       error: null,
-      autoRefreshInterval: null
+      successMessage: null,
+      autoRefreshInterval: null,
+      showModal: false,
+      modalMode: 'add',
+      form: emptyForm()
     }
   },
   computed: {
     sortedTotes() {
-      return [...this.totes].sort((a, b) => {
-        return new Date(b.created_at) - new Date(a.created_at)
-      })
+      return [...this.totes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     },
-    totalFishKg() {
-      return this.totes.reduce((sum, tote) => sum + (parseFloat(tote.fish_kg) || 0), 0)
-    },
-    totalIceOutKg() {
-      return this.totes.reduce((sum, tote) => sum + (parseFloat(tote.ice_out_kg) || 0), 0)
-    },
-    totalWaterOutKg() {
-      return this.totes.reduce((sum, tote) => sum + (parseFloat(tote.water_out_kg) || 0), 0)
-    }
+    totalFishKg()    { return this.totes.reduce((s, t) => s + (parseFloat(t.fish_kg) || 0), 0) },
+    totalIceOutKg()  { return this.totes.reduce((s, t) => s + (parseFloat(t.ice_out_kg) || 0), 0) },
+    totalWaterOutKg(){ return this.totes.reduce((s, t) => s + (parseFloat(t.water_out_kg) || 0), 0) }
   },
   methods: {
+    openModal(mode, tote = null) {
+      this.modalMode = mode
+      if (mode === 'edit' && tote) {
+        this.form = {
+          tote_id:      tote.tote_id,
+          tote_kg:      tote.tote_kg      ?? 0,
+          ice_kg:       tote.ice_kg       ?? 0,
+          water_kg:     tote.water_kg     ?? 0,
+          fish_kg:      tote.fish_kg      ?? null,
+          raw_kg:       tote.raw_kg       ?? 0,
+          ice_out_kg:   tote.ice_out_kg   ?? null,
+          water_out_kg: tote.water_out_kg ?? 0,
+          temp_out:     tote.temp_out     ?? null
+        }
+      } else {
+        this.form = emptyForm()
+      }
+      this.error = null
+      this.showModal = true
+    },
+    closeModal() {
+      this.showModal = false
+      this.error = null
+    },
+    async submitForm() {
+      this.modalMode === 'add' ? await this.addTote() : await this.updateTote()
+    },
     async fetchTotes() {
       this.loading = true
       this.error = null
       try {
-        const response = await fetch('/api/totes')
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status}`)
-        }
-        const data = await response.json()
+        const res = await fetch('/api/totes')
+        if (!res.ok) throw new Error(`Error: ${res.status}`)
+        const data = await res.json()
         this.totes = data.totes || []
       } catch (err) {
         this.error = `Error loading totes: ${err.message}`
-        console.error('Error fetching totes:', err)
       } finally {
         this.loading = false
       }
     },
-    refreshTotes() {
-      this.fetchTotes()
+    refreshTotes() { this.fetchTotes() },
+    async addTote() {
+      this.loading = true
+      this.error = null
+      try {
+        const res = await fetch('/api/totes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form)
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || `Error: ${res.status}`)
+        }
+        this.successMessage = `✓ Tote ${this.form.tote_id} created!`
+        this.closeModal()
+        await this.fetchTotes()
+        setTimeout(() => { this.successMessage = null }, 3000)
+      } catch (err) {
+        this.error = `Error creating tote: ${err.message}`
+      } finally {
+        this.loading = false
+      }
+    },
+    async updateTote() {
+      this.loading = true
+      this.error = null
+      try {
+        const { tote_id, ...fields } = this.form
+        const res = await fetch(`/api/totes/${tote_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fields)
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || `Error: ${res.status}`)
+        }
+        this.successMessage = `✓ Tote ${tote_id} updated!`
+        this.closeModal()
+        await this.fetchTotes()
+        setTimeout(() => { this.successMessage = null }, 3000)
+      } catch (err) {
+        this.error = `Error updating tote: ${err.message}`
+      } finally {
+        this.loading = false
+      }
     },
     formatNumber(value) {
       if (value === null || value === undefined) return '-'
@@ -147,27 +284,18 @@ export default {
     },
     formatDate(dateString) {
       if (!dateString) return '-'
-      const date = new Date(dateString)
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
       })
     }
   },
   mounted() {
     this.fetchTotes()
-    // Auto-refresh every 30 seconds
-    this.autoRefreshInterval = setInterval(() => {
-      this.fetchTotes()
-    }, 30000)
+    this.autoRefreshInterval = setInterval(() => this.fetchTotes(), 30000)
   },
   beforeUnmount() {
-    if (this.autoRefreshInterval) {
-      clearInterval(this.autoRefreshInterval)
-    }
+    if (this.autoRefreshInterval) clearInterval(this.autoRefreshInterval)
   }
 }
 </script>
@@ -185,13 +313,15 @@ export default {
   align-items: center;
   margin-bottom: 20px;
 
-  h1 {
-    margin: 0;
-    color: #2c3e50;
-  }
+  h1 { margin: 0; color: #2c3e50; }
 }
 
-.refresh-btn {
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.add-btn {
   padding: 10px 20px;
   background: #42b983;
   color: white;
@@ -199,16 +329,22 @@ export default {
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.3s;
+  font-weight: 600;
+  transition: background 0.2s;
+  &:hover { background: #359268; }
+}
 
-  &:hover:not(:disabled) {
-    background: #359268;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+.refresh-btn {
+  padding: 10px 20px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  &:hover:not(:disabled) { background: #2563eb; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 .status-badge {
@@ -221,40 +357,13 @@ export default {
   letter-spacing: 0.5px;
   white-space: nowrap;
 
-  &.status-empty {
-    background: #f1f3f4;
-    color: #5f6368;
-  }
-
-  &.status-inbound-ready {
-    background: #e3f2fd;
-    color: #1565c0;
-  }
-
-  &.status-product-linked {
-    background: #e8f5e9;
-    color: #2e7d32;
-  }
-
-  &.status-outbound-ready {
-    background: #fff8e1;
-    color: #f57f17;
-  }
-
-  &.status-in-transit {
-    background: #f3e5f5;
-    color: #6a1b9a;
-  }
-
-  &.status-received-for-packing {
-    background: #e0f7fa;
-    color: #00695c;
-  }
-
-  &.status-offloaded-to-clean {
-    background: #fce4ec;
-    color: #880e4f;
-  }
+  &.status-empty             { background: #f1f3f4; color: #5f6368; }
+  &.status-inbound-ready     { background: #e3f2fd; color: #1565c0; }
+  &.status-product-linked    { background: #e8f5e9; color: #2e7d32; }
+  &.status-outbound-ready    { background: #fff8e1; color: #f57f17; }
+  &.status-in-transit        { background: #f3e5f5; color: #6a1b9a; }
+  &.status-received-for-packing   { background: #e0f7fa; color: #00695c; }
+  &.status-offloaded-to-clean     { background: #fce4ec; color: #880e4f; }
 }
 
 .error-message {
@@ -264,6 +373,15 @@ export default {
   border-radius: 5px;
   margin-bottom: 20px;
   border-left: 4px solid #d8000c;
+}
+
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  border-left: 4px solid #28a745;
 }
 
 .loading, .empty-state {
@@ -277,7 +395,7 @@ export default {
   overflow-x: auto;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   margin-bottom: 20px;
 }
 
@@ -288,7 +406,6 @@ export default {
 
   thead {
     background: #f8f9fa;
-    
     th {
       padding: 15px 10px;
       text-align: left;
@@ -299,36 +416,32 @@ export default {
     }
   }
 
-  tbody {
-    .tote-row {
+  tbody .tote-row {
+    transition: background 0.2s;
+    &:hover { background: #f8f9fa; }
+
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .tote-id { font-weight: 600; color: #42b983; }
+
+    .linked-lines {
+      .line-badge { font-size: 13px; color: #2c3e50; display: inline-block; }
+      .no-link { color: #9ca3af; font-style: italic; }
+    }
+
+    .edit-btn {
+      padding: 5px 10px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
       transition: background 0.2s;
-
-      &:hover {
-        background: #f8f9fa;
-      }
-
-      td {
-        padding: 12px 10px;
-        border-bottom: 1px solid #dee2e6;
-      }
-
-      .tote-id {
-        font-weight: 600;
-        color: #42b983;
-      }
-
-      .linked-lines {
-        .line-badge {
-          font-size: 13px;
-          color: #2c3e50;
-          display: inline-block;
-        }
-
-        .no-link {
-          color: #9ca3af;
-          font-style: italic;
-        }
-      }
+      &:hover { background: #2563eb; }
     }
   }
 }
@@ -344,39 +457,144 @@ export default {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   text-align: center;
 
-  .stat-value {
-    font-size: 32px;
-    font-weight: bold;
-    color: #42b983;
+  .stat-value { font-size: 32px; font-weight: bold; color: #42b983; margin-bottom: 5px; }
+  .stat-label { font-size: 14px; color: #666; }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalIn 0.2s ease;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e5e7eb;
+
+  h2 { margin: 0; color: #2c3e50; font-size: 18px; }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+    padding: 0 4px;
+    &:hover { color: #111; }
+  }
+}
+
+.tote-form {
+  padding: 25px;
+
+  .form-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #6b7280;
+    margin: 18px 0 10px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 6px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
     margin-bottom: 5px;
   }
 
-  .stat-label {
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+
+    label {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #374151;
+      font-size: 13px;
+    }
+
+    input {
+      padding: 9px 10px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      &:focus { outline: none; border-color: #42b983; }
+      &:disabled { background: #f3f4f6; color: #6b7280; cursor: not-allowed; }
+    }
+  }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+
+  .cancel-btn {
+    padding: 10px 24px;
+    background: #f3f4f6;
+    color: #374151;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
     font-size: 14px;
-    color: #666;
+    font-weight: 600;
+    transition: background 0.2s;
+    &:hover { background: #e5e7eb; }
+  }
+
+  .submit-btn {
+    padding: 10px 24px;
+    background: #42b983;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s;
+    &:hover:not(:disabled) { background: #359268; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
   }
 }
 
 @media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 15px;
-
-    h1 {
-      font-size: 24px;
-    }
-  }
-
-  .totes-table {
-    font-size: 12px;
-
-    thead th,
-    tbody td {
-      padding: 8px 5px;
-    }
-  }
+  .header { flex-direction: column; gap: 15px; h1 { font-size: 24px; } }
+  .tote-form .form-row { grid-template-columns: 1fr 1fr; }
+  .totes-table { font-size: 12px; thead th, tbody td { padding: 8px 5px; } }
 }
 </style>
