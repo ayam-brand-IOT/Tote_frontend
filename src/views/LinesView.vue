@@ -19,7 +19,6 @@
             <th>Active Product</th>
             <th>Type</th>
             <th>Size</th>
-            <th>Destination</th>
             <th>Since</th>
             <th>Line Comments</th>
             <th>Actions</th>
@@ -34,7 +33,6 @@
             </td>
             <td>{{ line.type || '-' }}</td>
             <td>{{ line.size || '-' }}</td>
-            <td>{{ line.destination || '-' }}</td>
             <td class="since">{{ line.started_at ? formatDate(line.started_at) : '-' }}</td>
             <td class="comments">{{ line.comments || '-' }}</td>
             <td class="actions-cell">
@@ -74,10 +72,6 @@
           <div class="form-group">
             <label>Line ID *</label>
             <input v-model="lineForm.line_id" required :disabled="lineModalMode === 'edit'" placeholder="e.g., L001" />
-          </div>
-          <div class="form-group">
-            <label>Destination</label>
-            <input v-model="lineForm.destination" placeholder="e.g., Factory A, USA" />
           </div>
           <div class="form-group">
             <label>Comments</label>
@@ -191,7 +185,7 @@ export default {
       // Line modal
       showLineModal: false,
       lineModalMode: 'add',
-      lineForm: { line_id: '', destination: '', comments: '' },
+      lineForm: { line_id: '', comments: '' },
       // Assign modal
       showAssignModal: false,
       assignTarget: null,
@@ -213,8 +207,8 @@ export default {
     openLineModal(mode, line = null) {
       this.lineModalMode = mode;
       this.lineForm = mode === 'edit' && line
-        ? { line_id: line.line_id, destination: line.destination || '', comments: line.comments || '' }
-        : { line_id: '', destination: '', comments: '' };
+        ? { line_id: line.line_id, comments: line.comments || '' }
+        : { line_id: '', comments: '' };
       this.error = null;
       this.showLineModal = true;
     },
@@ -226,7 +220,7 @@ export default {
       try {
         const res = await fetch('/api/lines', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ line_id: this.lineForm.line_id, destination: this.lineForm.destination || null, comments: this.lineForm.comments || null })
+          body: JSON.stringify({ line_id: this.lineForm.line_id, comments: this.lineForm.comments || null })
         });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error || `Error: ${res.status}`); }
         this.successMessage = `✓ Line ${this.lineForm.line_id} created successfully!`;
@@ -241,7 +235,7 @@ export default {
       try {
         const res = await fetch(`/api/lines/${this.lineForm.line_id}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ destination: this.lineForm.destination || null, comments: this.lineForm.comments || null })
+          body: JSON.stringify({ comments: this.lineForm.comments || null })
         });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error || `Error: ${res.status}`); }
         this.successMessage = `✓ Line ${this.lineForm.line_id} updated!`;
