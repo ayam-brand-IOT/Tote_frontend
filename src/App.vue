@@ -2,6 +2,7 @@
   <div id="app">
     <nav>
       <router-link to="/totes">📦 Totes</router-link> |
+      <router-link to="/products">🐟 Products</router-link> |
       <router-link to="/lines">🏭 Lines</router-link> |
       <router-link to="/export">📥 Export</router-link>
     </nav>

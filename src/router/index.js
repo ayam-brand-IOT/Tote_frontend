@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import TotesView from '../views/TotesView.vue'
 import LinesView from '../views/LinesView.vue'
+import ProductsView from '../views/ProductsView.vue'
 import ExportView from '../views/ExportView.vue'
 
 const routes = [
@@ -12,6 +13,11 @@ const routes = [
   {
     path: '/totes',
     redirect: '/'
+  },
+  {
+    path: '/products',
+    name: 'products',
+    component: ProductsView
   },
   {
     path: '/lines',
