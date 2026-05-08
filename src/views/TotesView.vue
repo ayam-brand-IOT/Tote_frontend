@@ -42,7 +42,7 @@
             <td class="linked-lines">
               <span v-if="tote.linked_lines && tote.linked_lines.length > 0">
                 <span v-for="(line, index) in tote.linked_lines" :key="line.line_id" class="line-badge">
-                  {{ line.line_id }}: {{ line.product }} ({{ line.type }})
+                  {{ line.line_id }}: {{ line.product }} ({{ line.type }}){{ line.destination ? ' → ' + line.destination : '' }}
                   <span v-if="index < tote.linked_lines.length - 1">, </span>
                 </span>
               </span>
