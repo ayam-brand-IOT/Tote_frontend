@@ -19,6 +19,7 @@
             <th>Active Product</th>
             <th>Type</th>
             <th>Size</th>
+            <th>Destination</th>
             <th>Since</th>
             <th>Line Comments</th>
             <th>Actions</th>
@@ -33,6 +34,10 @@
             </td>
             <td>{{ line.type || '-' }}</td>
             <td>{{ line.size || '-' }}</td>
+            <td>
+              <span v-if="line.destination" class="dest-badge">{{ line.destination.replace('_', ' ') }}</span>
+              <span v-else class="no-product">—</span>
+            </td>
             <td class="since">{{ line.started_at ? formatDate(line.started_at) : '-' }}</td>
             <td class="comments">{{ line.comments || '-' }}</td>
             <td class="actions-cell">
@@ -91,15 +96,24 @@
     <div v-if="showAssignModal" class="modal-overlay" @click.self="closeAssignModal">
       <div class="modal">
         <div class="modal-header">
-          <h2>Assign Product to Line {{ assignTarget?.line_id }}</h2>
+          <h2>Assign Product to Line</h2>
           <button class="modal-close" @click="closeAssignModal">×</button>
         </div>
         <div v-if="assignTarget?.product" class="current-assignment">
           <span class="current-label">Current:</span>
-          <span class="current-value">{{ assignTarget.product }} · {{ assignTarget.type }}</span>
+          <span class="current-value">{{ assignTarget.product }} · {{ assignTarget.type }}{{ assignTarget.destination ? ' → ' + assignTarget.destination.replace('_', ' ') : '' }}</span>
           <span class="current-warning">Assigning a new product will end this assignment.</span>
         </div>
         <form @submit.prevent="submitAssign" class="line-form">
+          <div class="form-group">
+            <label>Line *</label>
+            <select v-model="assignForm.line_id" required @change="onAssignLineChange">
+              <option value="" disabled>Select a line</option>
+              <option v-for="l in lines" :key="l.line_id" :value="l.line_id">
+                {{ l.line_id }}{{ l.product ? ' — ' + l.product + ' (' + l.type + ')' : ' — (unassigned)' }}
+              </option>
+            </select>
+          </div>
           <div class="form-group">
             <label>Product *</label>
             <select v-model="assignForm.product_id" required :disabled="loadingProducts">
@@ -113,6 +127,13 @@
             </span>
           </div>
           <div class="form-group">
+            <label>Destination</label>
+            <select v-model="assignForm.destination">
+              <option value="">— No destination —</option>
+              <option v-for="d in destinations" :key="d" :value="d">{{ d.replace('_', ' ') }}</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>Assignment Comments</label>
             <textarea v-model="assignForm.comments" rows="2" placeholder="e.g., batch #, shift..."></textarea>
           </div>
@@ -121,7 +142,7 @@
               {{ loading ? '...' : '✕ End Current Assignment' }}
             </button>
             <button type="button" @click="closeAssignModal" class="cancel-btn">Cancel</button>
-            <button type="submit" class="submit-btn" :disabled="loading || !assignForm.product_id">
+            <button type="submit" class="submit-btn" :disabled="loading || !assignForm.product_id || !assignForm.line_id">
               {{ loading ? 'Saving...' : '✓ Assign' }}
             </button>
           </div>
@@ -145,6 +166,7 @@
                 <th>Product</th>
                 <th>Type</th>
                 <th>Size</th>
+                <th>Destination</th>
                 <th>Started</th>
                 <th>Ended</th>
                 <th>Status</th>
@@ -156,6 +178,7 @@
                 <td class="product-name">{{ a.product }}</td>
                 <td>{{ a.type }}</td>
                 <td>{{ a.size || '-' }}</td>
+                <td>{{ a.destination ? a.destination.replace('_', ' ') : '-' }}</td>
                 <td>{{ formatDate(a.started_at) }}</td>
                 <td>{{ a.ended_at ? formatDate(a.ended_at) : '—' }}</td>
                 <td><span :class="a.ended_at ? 'badge-ended' : 'badge-active'">{{ a.ended_at ? 'Ended' : 'Active' }}</span></td>
@@ -177,6 +200,7 @@ export default {
       lines: [],
       products: [],
       assignments: [],
+      destinations: ['FACTORY_1','FACTORY_2','FACTORY_3','FACTORY_4','FACTORY_5','FACTORY_6','FACTORY_7','FACTORY_8'],
       loading: false,
       loadingProducts: false,
       loadingHistory: false,
@@ -189,7 +213,7 @@ export default {
       // Assign modal
       showAssignModal: false,
       assignTarget: null,
-      assignForm: { product_id: '', comments: '' },
+      assignForm: { line_id: '', product_id: '', destination: '', comments: '' },
       // History modal
       showHistoryModal: false,
       historyLine: null,
@@ -261,21 +285,38 @@ export default {
     // ── Assign modal ────────────────────────────────────────────────────────
     async openAssignModal(line) {
       this.assignTarget = line;
-      this.assignForm = { product_id: '', comments: '' };
+      this.assignForm = {
+        line_id: line.line_id,
+        product_id: '',
+        destination: line.destination || '',
+        comments: ''
+      };
       this.error = null;
       this.showAssignModal = true;
       await this.fetchProducts();
     },
+    onAssignLineChange() {
+      const selected = this.lines.find(l => l.line_id === this.assignForm.line_id);
+      if (selected) {
+        this.assignTarget = selected;
+        this.assignForm.destination = selected.destination || '';
+      }
+    },
     closeAssignModal() { this.showAssignModal = false; this.assignTarget = null; this.error = null; },
     async submitAssign() {
       this.loading = true; this.error = null;
+      const lineId = this.assignForm.line_id;
       try {
-        const res = await fetch(`/api/lines/${this.assignTarget.line_id}/assign`, {
+        const res = await fetch(`/api/lines/${lineId}/assign`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: this.assignForm.product_id, comments: this.assignForm.comments || null })
+          body: JSON.stringify({
+            product_id: this.assignForm.product_id,
+            destination: this.assignForm.destination || null,
+            comments: this.assignForm.comments || null
+          })
         });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error || `Error: ${res.status}`); }
-        this.successMessage = `✓ Product assigned to line ${this.assignTarget.line_id}!`;
+        this.successMessage = `✓ Product assigned to line ${lineId}!`;
         this.closeAssignModal();
         await this.fetchLines();
         setTimeout(() => { this.successMessage = null; }, 3000);
@@ -283,12 +324,13 @@ export default {
       finally { this.loading = false; }
     },
     async unassign() {
-      if (!confirm(`End the current product assignment for line ${this.assignTarget.line_id}?`)) return;
+      const lineId = this.assignForm.line_id;
+      if (!confirm(`End the current product assignment for line ${lineId}?`)) return;
       this.loading = true; this.error = null;
       try {
-        const res = await fetch(`/api/lines/${this.assignTarget.line_id}/unassign`, { method: 'POST' });
+        const res = await fetch(`/api/lines/${lineId}/unassign`, { method: 'POST' });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error || `Error: ${res.status}`); }
-        this.successMessage = `✓ Assignment ended for line ${this.assignTarget.line_id}.`;
+        this.successMessage = `✓ Assignment ended for line ${lineId}.`;
         this.closeAssignModal();
         await this.fetchLines();
         setTimeout(() => { this.successMessage = null; }, 3000);
@@ -367,6 +409,7 @@ export default {
 }
 
 .product-badge { background: #dbeafe; color: #1e40af; padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: 13px; }
+.dest-badge { background: #ede9fe; color: #6d28d9; padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: 13px; }
 .no-product { color: #d1d5db; font-style: italic; font-size: 13px; }
 
 .assign-btn  { padding: 5px 8px; background: #42b983; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: background 0.2s; &:hover { background: #359268; } }
