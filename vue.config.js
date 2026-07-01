@@ -5,6 +5,12 @@ module.exports = defineConfig({
   // Compilar a la carpeta public del backend
   outputDir: '../Tote_backend/public/app',
   publicPath: '/app/',
+  chainWebpack: config => {
+    config.plugin('html').tap(args => {
+      args[0].title = 'Ayam Brand — Tote Management'
+      return args
+    })
+  },
   devServer: {
     proxy: {
       '/api': {

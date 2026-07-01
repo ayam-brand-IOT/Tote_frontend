@@ -1,23 +1,25 @@
 <template>
-  <div class="export-view">
-    <div class="header">
-      <h1>📥 Export to Excel</h1>
-      <p class="subtitle">Filter totes and download data as an Excel file</p>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h1><AppIcon name="download" :size="24" />Export to Excel</h1>
+        <p class="page-subtitle">Filter totes and download the data as an Excel file.</p>
+      </div>
     </div>
 
     <!-- Filters card -->
-    <div class="card filters-card">
+    <div class="card">
       <h2>Filters</h2>
-      <div class="filters-grid">
-        <div class="filter-group">
+      <div class="form-row">
+        <div class="form-group">
           <label for="from-date">From</label>
           <input id="from-date" type="date" v-model="filters.from" />
         </div>
-        <div class="filter-group">
+        <div class="form-group">
           <label for="to-date">To</label>
           <input id="to-date" type="date" v-model="filters.to" />
         </div>
-        <div class="filter-group">
+        <div class="form-group">
           <label for="status-filter">Status</label>
           <select id="status-filter" v-model="filters.status">
             <option value="">All</option>
@@ -34,24 +36,29 @@
 
       <div class="actions">
         <button class="btn btn-secondary" @click="loadPreview" :disabled="previewLoading">
-          {{ previewLoading ? '⟳ Loading...' : '🔍 Preview' }}
+          <span v-if="previewLoading" class="spinner"></span>
+          <AppIcon v-else name="search" :size="18" />
+          {{ previewLoading ? 'Loading...' : 'Preview' }}
         </button>
         <button class="btn btn-primary" @click="downloadExcel" :disabled="downloading || previewCount === 0">
-          {{ downloading ? '⟳ Generating...' : `📥 Download Excel${previewCount !== null ? ' (' + previewCount + ' rows)' : ''}` }}
+          <span v-if="downloading" class="spinner"></span>
+          <AppIcon v-else name="download" :size="18" />
+          {{ downloading ? 'Generating...' : `Download Excel${previewCount !== null ? ' (' + previewCount + ' rows)' : ''}` }}
         </button>
         <button class="btn btn-ghost" @click="clearFilters">Clear</button>
       </div>
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-message">❌ {{ error }}</div>
+    <div v-if="error" class="banner banner-error"><AppIcon name="alert-circle" :size="20" />{{ error }}</div>
 
     <!-- Preview table -->
     <div class="card" v-if="previewRows.length > 0">
       <div class="preview-header">
-        <h2>Preview <span class="count-badge">{{ previewRows.length }} totes</span></h2>
+        <h2>Preview</h2>
+        <span class="count-badge">{{ previewRows.length }} totes</span>
       </div>
-      <div class="table-container">
+      <div class="table-wrap no-margin">
         <table class="data-table">
           <thead>
             <tr>
@@ -70,9 +77,7 @@
           <tbody>
             <tr v-for="tote in previewRows" :key="tote.id">
               <td class="tote-id-cell">{{ tote.tote_id }}</td>
-              <td>
-                <span :class="'status-badge status-' + tote.status">{{ tote.status || 'empty' }}</span>
-              </td>
+              <td><StatusBadge :status="tote.status" /></td>
               <td>{{ fmt(tote.fish_kg) }}</td>
               <td>{{ fmt(tote.ice_kg) }}</td>
               <td>{{ fmt(tote.water_kg) }}</td>
@@ -92,15 +97,19 @@
       </div>
     </div>
 
-    <div class="empty-preview" v-else-if="previewed && previewRows.length === 0">
-      No totes match the selected filters.
-    </div>
+    <EmptyState v-else-if="previewed && previewRows.length === 0" icon="filter"
+      message="No totes match the selected filters." compact />
   </div>
 </template>
 
 <script>
+import AppIcon from '@/components/icons/AppIcon.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
+import EmptyState from '@/components/EmptyState.vue'
+
 export default {
   name: 'ExportView',
+  components: { AppIcon, StatusBadge, EmptyState },
   data() {
     return {
       filters: {
@@ -219,193 +228,39 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.export-view {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.header {
-  margin-bottom: 24px;
-  h1 { margin: 0 0 6px; color: #2c3e50; }
-  .subtitle { color: #6b7280; margin: 0; }
-}
-
-.card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  padding: 24px;
-  margin-bottom: 24px;
-
-  h2 {
-    margin: 0 0 18px;
-    color: #2c3e50;
-    font-size: 18px;
-  }
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
-  }
-
-  input, select {
-    padding: 10px 12px;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #2c3e50;
-    transition: border-color 0.2s;
-    background: white;
-
-    &:focus {
-      outline: none;
-      border-color: #42b983;
-    }
-  }
-}
-
 .actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   align-items: center;
-}
-
-.btn {
-  padding: 10px 22px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:disabled { opacity: 0.55; cursor: not-allowed; }
-
-  &.btn-primary {
-    background: #42b983;
-    color: white;
-    &:hover:not(:disabled) { background: #359268; }
-  }
-
-  &.btn-secondary {
-    background: #667eea;
-    color: white;
-    &:hover:not(:disabled) { background: #4f60d4; }
-  }
-
-  &.btn-ghost {
-    background: #f3f4f6;
-    color: #374151;
-    &:hover:not(:disabled) { background: #e5e7eb; }
-  }
-}
-
-.error-message {
-  background: #ffe6e6;
-  color: #d8000c;
-  padding: 14px 18px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border-left: 4px solid #d8000c;
+  margin-top: var(--space-2);
 }
 
 .preview-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
   h2 { margin: 0; }
 }
 
 .count-badge {
-  background: #42b983;
-  color: white;
-  font-size: 13px;
+  background: var(--color-brand);
+  color: #fff;
+  font-size: var(--text-sm);
   font-weight: 600;
   padding: 2px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-full);
 }
 
-.table-container {
-  overflow-x: auto;
-}
+.table-wrap.no-margin { margin-bottom: 0; }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-
-  thead th {
-    padding: 12px 10px;
-    text-align: left;
-    font-weight: 600;
-    color: #2c3e50;
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    white-space: nowrap;
-  }
-
-  tbody tr {
-    transition: background 0.15s;
-    &:hover { background: #f8f9fa; }
-
-    td {
-      padding: 10px;
-      border-bottom: 1px solid #dee2e6;
-    }
-  }
-}
-
-.tote-id-cell { font-weight: 600; color: #42b983; }
-.lines-cell { max-width: 260px; font-size: 12px; color: #374151; }
-.date-cell { white-space: nowrap; font-size: 12px; color: #6b7280; }
-.none { color: #9ca3af; font-style: italic; }
-
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  white-space: nowrap;
-
-  &.status-empty              { background: #f1f3f4; color: #5f6368; }
-  &.status-inbound-ready      { background: #e3f2fd; color: #1565c0; }
-  &.status-product-linked     { background: #e8f5e9; color: #2e7d32; }
-  &.status-outbound-ready     { background: #fff8e1; color: #f57f17; }
-  &.status-in-transit         { background: #f3e5f5; color: #6a1b9a; }
-  &.status-received-for-packing { background: #e0f7fa; color: #00695c; }
-  &.status-offloaded-to-clean { background: #fce4ec; color: #880e4f; }
-}
-
-.empty-preview {
-  text-align: center;
-  padding: 40px;
-  color: #9ca3af;
-  font-size: 16px;
-}
+.tote-id-cell { font-weight: 600; color: var(--color-brand); }
+.lines-cell { max-width: 260px; font-size: var(--text-xs); color: var(--color-text); }
+.date-cell { white-space: nowrap; font-size: var(--text-xs); color: var(--color-text-secondary); }
+.none { color: var(--color-text-muted); font-style: italic; }
 
 @media (max-width: 768px) {
   .actions { flex-direction: column; align-items: stretch; }
-  .btn { text-align: center; }
 }
 </style>
