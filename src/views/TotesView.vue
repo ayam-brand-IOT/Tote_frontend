@@ -17,8 +17,12 @@
       </div>
     </div>
 
-    <div v-if="error" class="banner banner-error"><AppIcon name="alert-circle" :size="20" />{{ error }}</div>
-    <div v-if="successMessage" class="banner banner-success"><AppIcon name="check-circle" :size="20" />{{ successMessage }}</div>
+    <Transition name="banner">
+      <div v-if="error" class="banner banner-error"><AppIcon name="alert-circle" :size="20" />{{ error }}</div>
+    </Transition>
+    <Transition name="banner">
+      <div v-if="successMessage" class="banner banner-success"><AppIcon name="check-circle" :size="20" />{{ successMessage }}</div>
+    </Transition>
 
     <EmptyState v-if="loading && !totes.length" loading message="Loading totes..." />
     <EmptyState v-else-if="!totes.length" icon="box" title="No totes yet"

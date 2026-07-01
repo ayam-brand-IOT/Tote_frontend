@@ -308,6 +308,21 @@ a {
 .banner-warning { background: var(--color-warning-bg); color: var(--color-warning); border-color: #f6ddb0; }
 .banner-info    { background: var(--color-info-bg);    color: var(--color-info);    border-color: #c6dcf7; }
 
+// Banner enter/exit — treated like a toast: quick ease-out in, faster ease-out
+// out (~65% of enter duration). CSS transitions (not keyframes) so a banner
+// that gets replaced mid-animation retargets smoothly instead of restarting.
+.banner-enter-active {
+  transition: opacity var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
+}
+.banner-leave-active {
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+.banner-enter-from,
+.banner-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 // ── Empty / loading states ──────────────────────────────────────────────
 .state-block {
   display: flex;

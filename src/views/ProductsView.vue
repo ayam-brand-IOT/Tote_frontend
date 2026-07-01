@@ -10,8 +10,12 @@
       </button>
     </div>
 
-    <div v-if="error" class="banner banner-error"><AppIcon name="alert-circle" :size="20" />{{ error }}</div>
-    <div v-if="successMessage" class="banner banner-success"><AppIcon name="check-circle" :size="20" />{{ successMessage }}</div>
+    <Transition name="banner">
+      <div v-if="error" class="banner banner-error"><AppIcon name="alert-circle" :size="20" />{{ error }}</div>
+    </Transition>
+    <Transition name="banner">
+      <div v-if="successMessage" class="banner banner-success"><AppIcon name="check-circle" :size="20" />{{ successMessage }}</div>
+    </Transition>
 
     <EmptyState v-if="loading && !products.length" loading message="Loading products..." />
     <EmptyState v-else-if="!products.length && !loading" icon="fish" title="No products yet"

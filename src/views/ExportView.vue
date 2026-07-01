@@ -50,7 +50,9 @@
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="banner banner-error"><AppIcon name="alert-circle" :size="20" />{{ error }}</div>
+    <Transition name="banner">
+      <div v-if="error" class="banner banner-error"><AppIcon name="alert-circle" :size="20" />{{ error }}</div>
+    </Transition>
 
     <!-- Preview table -->
     <div class="card" v-if="previewRows.length > 0">

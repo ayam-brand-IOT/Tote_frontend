@@ -18,22 +18,24 @@
         </button>
 
         <nav id="primary-nav" class="app-nav" :class="{ open: mobileNavOpen }">
-          <router-link to="/totes" class="nav-link" @click="mobileNavOpen = false">
-            <AppIcon name="box" :size="18" />
-            <span>Totes</span>
-          </router-link>
-          <router-link to="/products" class="nav-link" @click="mobileNavOpen = false">
-            <AppIcon name="fish" :size="18" />
-            <span>Products</span>
-          </router-link>
-          <router-link to="/lines" class="nav-link" @click="mobileNavOpen = false">
-            <AppIcon name="factory" :size="18" />
-            <span>Lines</span>
-          </router-link>
-          <router-link to="/export" class="nav-link" @click="mobileNavOpen = false">
-            <AppIcon name="download" :size="18" />
-            <span>Export</span>
-          </router-link>
+          <div class="app-nav-inner">
+            <router-link to="/totes" class="nav-link" @click="mobileNavOpen = false">
+              <AppIcon name="box" :size="18" />
+              <span>Totes</span>
+            </router-link>
+            <router-link to="/products" class="nav-link" @click="mobileNavOpen = false">
+              <AppIcon name="fish" :size="18" />
+              <span>Products</span>
+            </router-link>
+            <router-link to="/lines" class="nav-link" @click="mobileNavOpen = false">
+              <AppIcon name="factory" :size="18" />
+              <span>Lines</span>
+            </router-link>
+            <router-link to="/export" class="nav-link" @click="mobileNavOpen = false">
+              <AppIcon name="download" :size="18" />
+              <span>Export</span>
+            </router-link>
+          </div>
         </nav>
       </div>
     </header>
@@ -170,18 +172,33 @@ main {
   .app-header-inner { flex-wrap: wrap; padding: var(--space-3) var(--space-4); }
   .nav-toggle { display: inline-flex; }
 
+  // Accordion trick: animating a 0fr → 1fr row track gives a smooth
+  // auto-height open/close without measuring the content in JS. The iOS-like
+  // drawer curve reads as a natural "unfurl" rather than a mechanical resize.
   .app-nav {
-    display: none;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 0fr;
     width: 100%;
+    opacity: 0;
+    transition: grid-template-rows var(--duration-slow) var(--ease-drawer),
+                opacity var(--duration-base) var(--ease-out);
+
+    &.open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+  }
+
+  .app-nav-inner {
+    display: flex;
+    flex-direction: column;
     gap: var(--space-1);
+    overflow: hidden;
     padding-top: var(--space-2);
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     margin-top: var(--space-2);
-
-    &.open { display: flex; }
-
-    .nav-link { width: 100%; }
   }
+
+  .nav-link { width: 100%; }
 }
 </style>
