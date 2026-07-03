@@ -29,6 +29,7 @@
             <th>Product</th>
             <th>Type</th>
             <th>Size</th>
+            <th>Origin</th>
             <th>Comments</th>
             <th>Actions</th>
           </tr>
@@ -39,6 +40,7 @@
             <td class="product-name">{{ p.product }}</td>
             <td>{{ p.type }}</td>
             <td>{{ p.size || '-' }}</td>
+            <td>{{ p.origin || '-' }}</td>
             <td class="comments">{{ p.comments || '-' }}</td>
             <td>
               <div class="actions-cell">
@@ -87,6 +89,10 @@
               <option v-for="s in fishSizes" :key="s" :value="s">{{ s }}</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Origin</label>
+            <input v-model="form.origin" placeholder="e.g., Vessel / area" />
+          </div>
         </div>
         <div class="form-group">
           <label>Comments</label>
@@ -110,7 +116,7 @@ import AppIcon from '@/components/icons/AppIcon.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
-const emptyForm = () => ({ id: null, product: '', type: '', size: '', comments: '' })
+const emptyForm = () => ({ id: null, product: '', type: '', size: '', origin: '', comments: '' })
 
 export default {
   name: 'ProductsView',
@@ -171,11 +177,11 @@ export default {
     async updateProduct() {
       this.loading = true; this.error = null
       try {
-        const { product, type, size, comments } = this.form
+        const { product, type, size, origin, comments } = this.form
         const res = await fetch(`/api/products/${this.form.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product, type, size, comments })
+          body: JSON.stringify({ product, type, size, origin, comments })
         })
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || `Error: ${res.status}`) }
         this.successMessage = `Product updated successfully!`
