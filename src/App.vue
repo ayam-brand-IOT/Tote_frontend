@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <header class="app-header">
+    <header v-if="showChrome" class="app-header">
       <div class="app-header-inner">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">
@@ -8,7 +8,7 @@
           </span>
           <span class="brand-text">
             <span class="brand-eyebrow">Ayam Brand</span>
-            <span class="brand-title">Tote Management</span>
+            <span class="brand-title">Production Monitor</span>
           </span>
         </div>
 
@@ -19,22 +19,43 @@
 
         <nav id="primary-nav" class="app-nav" :class="{ open: mobileNavOpen }">
           <div class="app-nav-inner">
-            <router-link to="/totes" class="nav-link" @click="mobileNavOpen = false">
-              <AppIcon name="box" :size="18" />
-              <span>Totes</span>
-            </router-link>
-            <router-link to="/products" class="nav-link" @click="mobileNavOpen = false">
-              <AppIcon name="fish" :size="18" />
-              <span>Products</span>
+            <router-link to="/" class="nav-link" @click="mobileNavOpen = false">
+              <AppIcon name="grid" :size="18" />
+              <span>Dashboard</span>
             </router-link>
             <router-link to="/lines" class="nav-link" @click="mobileNavOpen = false">
               <AppIcon name="factory" :size="18" />
               <span>Lines</span>
             </router-link>
-            <router-link to="/export" class="nav-link" @click="mobileNavOpen = false">
-              <AppIcon name="download" :size="18" />
-              <span>Export</span>
+            <router-link to="/products" class="nav-link" @click="mobileNavOpen = false">
+              <AppIcon name="fish" :size="18" />
+              <span>Raw Materials</span>
             </router-link>
+            <router-link v-if="isManagement" to="/config" class="nav-link" @click="mobileNavOpen = false">
+              <AppIcon name="settings" :size="18" />
+              <span>Config</span>
+            </router-link>
+            <span class="nav-divider" aria-hidden="true"></span>
+            <router-link to="/totes" class="nav-link nav-link-muted" @click="mobileNavOpen = false">
+              <AppIcon name="box" :size="18" />
+              <span>Active Totes</span>
+            </router-link>
+
+            <!-- User chip + logout (in the drawer on mobile) -->
+            <div class="nav-user">
+              <span class="nav-user-info">
+                <span class="nav-user-avatar" :class="isManagement ? 'is-mgmt' : 'is-prod'">
+                  <AppIcon :name="isManagement ? 'shield' : 'user'" :size="15" />
+                </span>
+                <span class="nav-user-text">
+                  <span class="nav-user-name">{{ username }}</span>
+                  <span class="nav-user-role">{{ isManagement ? 'Management' : 'Production' }}</span>
+                </span>
+              </span>
+              <button class="nav-logout" type="button" @click="logout" aria-label="Sign out">
+                <AppIcon name="logout" :size="18" />
+              </button>
+            </div>
           </div>
         </nav>
       </div>
@@ -54,7 +75,20 @@ export default {
   components: { AppIcon },
   data() {
     return { mobileNavOpen: false }
-  }
+  },
+  computed: {
+    isAuthenticated() { return this.$store.getters.isAuthenticated },
+    isManagement() { return this.$store.getters.isManagement },
+    username() { return this.$store.getters.username },
+    showChrome() { return this.isAuthenticated && this.$route.name !== 'login' },
+  },
+  methods: {
+    logout() {
+      this.mobileNavOpen = false
+      this.$store.dispatch('logout')
+      this.$router.push({ name: 'login' })
+    },
+  },
 }
 </script>
 
@@ -70,17 +104,19 @@ export default {
   position: sticky;
   top: 0;
   z-index: var(--z-header);
-  background: var(--color-ink);
+  // Ayam Brand red — vertical shade for depth, gold hairline underline.
+  background: linear-gradient(180deg, #d81531 0%, var(--color-brand) 55%, var(--color-brand-dark) 100%);
+  border-bottom: 2px solid var(--color-gold);
   box-shadow: var(--shadow-md);
 }
 
 .app-header-inner {
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: var(--space-3) var(--space-6);
+  padding: var(--space-3) var(--space-5);
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
 
 .brand {
@@ -97,9 +133,11 @@ export default {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
-  background: var(--color-brand);
-  color: #fff;
+  // White logo tile with the red mark, echoing the Ayam Brand lockup.
+  background: #fff;
+  color: var(--color-brand);
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
 .brand-text {
@@ -114,7 +152,7 @@ export default {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #e8a33d;
+  color: #ffd27a;
 }
 
 .brand-title {
@@ -141,6 +179,16 @@ export default {
 
 .app-nav {
   display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+// Desktop: keep every nav item — links AND the user chip — on one row.
+// (.nav-link is inline-flex while .nav-user is a block-level flex box, so
+// without an explicit flex row here the user chip drops onto a second line.)
+.app-nav-inner {
+  display: flex;
+  align-items: center;
   gap: var(--space-1);
 }
 
@@ -148,27 +196,103 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0.55rem var(--space-4);
+  padding: 0.5rem 0.85rem;
   border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.88);
   text-decoration: none;
   font-weight: 600;
   font-size: var(--text-sm);
+  white-space: nowrap;
   transition: background-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
 
-  &:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+  &:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
 
+  // Active = crisp white pill with red label (matches the brand lockup).
   &.router-link-exact-active {
-    background: var(--color-brand);
-    color: #fff;
+    background: #fff;
+    color: var(--color-brand);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   }
+}
+
+.nav-link-muted {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+
+.nav-tag {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-full);
+  padding: 1px 7px;
+  margin-left: 2px;
+}
+
+.router-link-exact-active .nav-tag {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.nav-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.35rem var(--space-1);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+// User chip + logout
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.nav-user-info { display: flex; align-items: center; gap: var(--space-2); }
+
+.nav-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  &.is-mgmt { background: #fff; color: var(--color-brand); }
+  &.is-prod { background: rgba(255, 255, 255, 0.22); color: #fff; }
+}
+
+.nav-user-text { display: flex; flex-direction: column; line-height: 1.1; }
+.nav-user-name { font-size: var(--text-sm); font-weight: 600; color: #fff; }
+.nav-user-role { font-size: 0.625rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #ffd27a; }
+
+.nav-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: background-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+  &:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+  &:active { transform: scale(0.94); }
 }
 
 main {
   flex: 1;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 860px) {
   .app-header-inner { flex-wrap: wrap; padding: var(--space-3) var(--space-4); }
   .nav-toggle { display: inline-flex; }
 
@@ -200,5 +324,17 @@ main {
   }
 
   .nav-link { width: 100%; }
+  .nav-divider { display: none; }
+
+  .nav-user {
+    width: 100%;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    justify-content: space-between;
+  }
 }
 </style>

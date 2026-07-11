@@ -5,7 +5,7 @@
         <h1><AppIcon name="factory" :size="24" />Production Lines</h1>
         <p class="page-subtitle">See which product and factory each line is running, and switch assignments.</p>
       </div>
-      <button @click="openLineModal('add')" class="btn btn-primary">
+      <button v-if="isManagement" @click="openLineModal('add')" class="btn btn-primary">
         <AppIcon name="plus" :size="18" />Add Line
       </button>
     </div>
@@ -58,10 +58,10 @@
                 <button @click="openHistoryModal(line)" class="icon-btn icon-btn-purple" :aria-label="`View assignment history for ${line.line_id}`">
                   <AppIcon name="history" :size="16" />
                 </button>
-                <button @click="openLineModal('edit', line)" class="icon-btn icon-btn-primary" :aria-label="`Edit line ${line.line_id}`">
+                <button v-if="isManagement" @click="openLineModal('edit', line)" class="icon-btn icon-btn-primary" :aria-label="`Edit line ${line.line_id}`">
                   <AppIcon name="pencil" :size="16" />
                 </button>
-                <button @click="deleteLine(line.line_id)" class="icon-btn icon-btn-danger" :disabled="loading" :aria-label="`Delete line ${line.line_id}`">
+                <button v-if="isManagement" @click="deleteLine(line.line_id)" class="icon-btn icon-btn-danger" :disabled="loading" :aria-label="`Delete line ${line.line_id}`">
                   <AppIcon name="trash" :size="16" />
                 </button>
               </div>
@@ -230,9 +230,19 @@ export default {
     }
   },
   computed: {
-    linesWithProduct() { return this.lines.filter(l => l.product).length }
+    linesWithProduct() { return this.lines.filter(l => l.product).length },
+    isManagement() { return this.$store.getters.isManagement }
   },
   methods: {
+    async fetchConfigOptions() {
+      try {
+        const res = await fetch('/api/config/options')
+        if (!res.ok) return
+        const { options } = await res.json()
+        const dests = (options.destination || []).filter(o => o.active).map(o => o.value)
+        if (dests.length) this.destinations = dests
+      } catch (_) { /* keep fallback constants */ }
+    },
     formatDate(ts) {
       return new Date(ts).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
     },
@@ -385,7 +395,7 @@ export default {
       finally { this.loadingProducts = false; }
     }
   },
-  mounted() { this.fetchLines(); }
+  mounted() { this.fetchLines(); this.fetchConfigOptions(); }
 }
 </script>
 

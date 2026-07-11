@@ -2,7 +2,7 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1><AppIcon name="fish" :size="24" />Products</h1>
+        <h1><AppIcon name="fish" :size="24" />Raw Materials</h1>
         <p class="page-subtitle">Manage the fish types and sizes that flow through your production lines.</p>
       </div>
       <button @click="openModal('add')" class="btn btn-primary">
@@ -157,6 +157,20 @@ export default {
         this.error = `Error loading products: ${err.message}`
       } finally { this.loading = false }
     },
+    // Load the controlled vocabularies managed in Config. Falls back to the
+    // static constants if the request fails so the form still works.
+    async fetchConfigOptions() {
+      try {
+        const res = await fetch('/api/config/options')
+        if (!res.ok) return
+        const { options } = await res.json()
+        const active = (arr) => (arr || []).filter(o => o.active).map(o => o.value)
+        const types = active(options.fish_type)
+        const sizes = active(options.fish_size)
+        if (types.length) this.fishTypes = types
+        if (sizes.length) this.fishSizes = sizes
+      } catch (_) { /* keep fallback constants */ }
+    },
     async addProduct() {
       this.loading = true; this.error = null
       try {
@@ -206,7 +220,7 @@ export default {
       } finally { this.loading = false }
     }
   },
-  mounted() { this.fetchProducts() }
+  mounted() { this.fetchProducts(); this.fetchConfigOptions() }
 }
 </script>
 

@@ -8,8 +8,10 @@
     "build:backend": "npm run build && echo 'Frontend compiled to ../Tote_backend/public/app'"
   },
   "dependencies": {
+    "apexcharts": "^3.54.1",
     "vue": "^3.2.13",
     "vue-router": "^4.0.3",
+    "vue3-apexcharts": "^1.11.1",
     "vuex": "^4.0.0"
   },
   "devDependencies": {

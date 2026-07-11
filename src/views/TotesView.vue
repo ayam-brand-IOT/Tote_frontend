@@ -2,7 +2,7 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1><AppIcon name="box" :size="24" />Tote List</h1>
+        <h1><AppIcon name="box" :size="24" />Active Totes</h1>
         <p class="page-subtitle">Track inbound weights, outbound yields and the status of every tote on the floor.</p>
       </div>
       <div class="page-header-actions">

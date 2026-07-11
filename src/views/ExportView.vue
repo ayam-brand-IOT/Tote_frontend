@@ -1,6 +1,6 @@
 <template>
-  <div class="page">
-    <div class="page-header">
+  <div :class="embedded ? 'export-embedded' : 'page'">
+    <div v-if="!embedded" class="page-header">
       <div>
         <h1><AppIcon name="download" :size="24" />Export to Excel</h1>
         <p class="page-subtitle">Filter totes and download the data as an Excel file.</p>
@@ -112,6 +112,11 @@ import EmptyState from '@/components/EmptyState.vue'
 export default {
   name: 'ExportView',
   components: { AppIcon, StatusBadge, EmptyState },
+  props: {
+    // When embedded inside the Config page we drop the outer .page wrapper and
+    // the standalone header so it reads as a section, not a second page.
+    embedded: { type: Boolean, default: false }
+  },
   data() {
     return {
       filters: {

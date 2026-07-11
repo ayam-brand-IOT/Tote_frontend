@@ -80,6 +80,31 @@
   --duration-base: 180ms;
   --duration-slow: 260ms;
 
+  // ── Data-viz palette ───────────────────────────────────────────────────
+  // Categorical series colours for line productivity. Distinct, ~AA on white,
+  // and tuned to sit beside the Ayam navy/red without clashing. Keep in sync
+  // with src/constants/chartColors.js (ApexCharts needs JS arrays).
+  --viz-1: #2563eb; // blue
+  --viz-2: #0d9488; // teal
+  --viz-3: #d97706; // amber
+  --viz-4: #7c3aed; // violet
+  --viz-5: #db2777; // pink
+  --viz-6: #0891b2; // cyan
+  --viz-7: #65a30d; // lime
+  --viz-8: #be123c; // rose
+
+  --viz-grid: #eceff4;
+  --viz-axis: #8891a5;
+
+  // Sequential accent for single-metric emphasis (throughput fills).
+  --viz-accent: #14213d;
+
+  // ── Dashboard surfaces ─────────────────────────────────────────────────
+  --dash-bg: #f4f6f9;
+  --panel-bg: #ffffff;
+  --panel-border: #e5e9f0;
+  --panel-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 20px rgba(15, 23, 42, 0.05);
+
   // ── Z-index scale ──────────────────────────────────────────────────────
   --z-header: 100;
   --z-modal: 1000;

@@ -7,7 +7,7 @@ module.exports = defineConfig({
   publicPath: '/app/',
   chainWebpack: config => {
     config.plugin('html').tap(args => {
-      args[0].title = 'Ayam Brand — Tote Management'
+      args[0].title = 'Ayam Brand — Production Monitor'
       return args
     })
   },
